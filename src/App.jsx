@@ -1,9 +1,12 @@
 import React from "react";
+import { Routes, Route } from "react-router-dom"; 
+import Dashboard from "./components/Home/Dashboard.jsx"; 
+// import CategoryDashboard from "./components/Home/CategoryDashboard.jsx"; 
 
-export default function App() {
+function App() {
   return (
-    <div className="min-h-screen max-h-full bg-zinc-950">
-      <div className="font-bold text-white">Testing</div>
-    </div>
+    <Dashboard/>
   );
 }
+
+export default App;
