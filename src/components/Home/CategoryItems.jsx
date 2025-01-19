@@ -1,304 +1,237 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useLocation, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom"; // Import useParams and useNavigate
+import { AiOutlineArrowLeft } from "react-icons/ai"; // Import the "Go Back" icon
 
 const CategoryItems = () => {
-  const { categoryId } = useParams();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [itemToRemove, setItemToRemove] = useState(null);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [selectedItems, setSelectedItems] = useState({});
-  const [kotDetails, setKotDetails] = useState(null);
+  const { categoryId } = useParams(); // Capture categoryId from URL params
+  const navigate = useNavigate(); // Initialize navigate hook
+  const [foodItems, setFoodItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false); // To control modal visibility
+  const [newItem, setNewItem] = useState({
+    itemName: "",
+    type: "",
+    kitchen: "",
+    price: "",
+    categoryId: categoryId,
+    description: "",
+    image: "",
+  }); // State for new item data
 
-  const { tableId } = location.state || {};
+  // Function to fetch food items
+  const fetchFoodItems = async () => {
+    if (!categoryId) {
+      alert("Invalid category ID.");
+      console.error("No categoryId provided.");
+      return;
+    }
+
+    console.log("Fetching data for categoryId:", categoryId);
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(
+        `https://efc-app-sprp.onrender.com/api/v1/admin/get-item/${categoryId}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbklkIjoiNjc4MTA2NTRjZjllNGRhOTA2YjNmZWMwIiwiY29tcGFueUlkIjoiRUZDIiwiaWF0IjoxNzM2NTA5MDEzLCJleHAiOjE4MjI5MDkwMTN9.e2p1wGd8c8H2ilyy6VAc8iFd4ioDiKgAlYRvPsjRtOo",
+          },
+        }
+      );
+      const result = await response.json();
+
+      console.log("API Response:", result);
+
+      if (response.ok && result.success) {
+        setFoodItems(result.data || []);
+      } else {
+        console.error("Error message from API:", result.message);
+        alert(result.message || "Failed to fetch food items.");
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      alert("An error occurred while fetching food items.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle form input changes
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewItem((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  // Handle form submission to add item
+  const handleAddItem = async () => {
+    if (!newItem.itemName || !newItem.price || !newItem.type || !newItem.kitchen) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        "https://efc-app-sprp.onrender.com/api/v1/admin/add-item",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization:
+              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbklkIjoiNjc4MTA2NTRjZjllNGRhOTA2YjNmZWMwIiwiY29tcGFueUlkIjoiRUZDIiwiaWF0IjoxNzM2NTA5MDEzLCJleHAiOjE4MjI5MDkwMTN9.e2p1wGd8c8H2ilyy6VAc8iFd4ioDiKgAlYRvPsjRtOo",
+          },
+          body: JSON.stringify(newItem),
+        }
+      );
+      const result = await response.json();
+
+      if (response.ok) {
+        alert(result.message || "Item added successfully");
+        setFoodItems((prev) => [...prev, result.item]);
+        setIsModalOpen(false); // Close modal after success
+      } else {
+        alert(result.message || "Failed to add item.");
+      }
+    } catch (error) {
+      console.error("Error adding item:", error);
+      alert("An error occurred while adding the item.");
+    }
+  };
 
   useEffect(() => {
-    const fetchItems = async () => {
-      try {
-        const response = await fetch(`https://efc-app-sprp.onrender.com/api/v1/admin/get-item/${categoryId}`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch items");
-        }
-        const data = await response.json();
-        setItems(data.data);
-        setLoading(false);
-      } catch (err) {
-        console.error(err);
-        setError(err.message);
-        setLoading(false);
-      }
-    };
-
-    fetchItems();
+    fetchFoodItems();
   }, [categoryId]);
 
-  const prepareSelectedItems = () => {
-    return Object.entries(selectedItems).map(([itemId, quantity]) => ({
-      itemId,
-      quantity,
-    }));
-  };
-
-  const handleRemove = async () => {
-    try {
-      const response = await fetch(
-        `https://efc-app-sprp.onrender.com/api/v1/admin/delete-category-item/${itemToRemove}`,
-        { method: "DELETE" }
-      );
-      if (!response.ok) throw new Error("Failed to remove item");
-      setItems((prevItems) => prevItems.filter((item) => item._id !== itemToRemove));
-      setItemToRemove(null);
-      setShowModal(false);
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 2000);
-    } catch (err) {
-      console.error(err);
-      alert("Error removing item");
-    }
-  };
-
-  const handleQuantityChange = (itemId, quantity) => {
-    setSelectedItems((prevSelectedItems) => ({
-      ...prevSelectedItems,
-      [itemId]: quantity,
-    }));
-  };
-
-  const handleSubmit = async () => {
-    if (!tableId) {
-      alert("Table ID is required.");
-      return;
-    }
-
-    const itemsToSubmit = prepareSelectedItems();
-
-    if (itemsToSubmit.length === 0) {
-      alert("No items selected.");
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        `https://efc-app-sprp.onrender.com/api/v1/admin/reserve-table/${tableId}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ items: itemsToSubmit }),
-        }
-      );
-
-      const result = await response.json();
-      if (result.success) {
-        alert("Items successfully added to the table!");
-        setSelectedItems({});
-      } else {
-        alert(`Error: ${result.message}`);
-      }
-    } catch (err) {
-      console.error("Error submitting items:", err);
-      alert("An error occurred while adding items.");
-    }
-  };
-  const handleGenerateKOT = async () => {
-    if (!tableId) {
-      alert("Table ID is required.");
-      return;
-    }
-
-    // const itemsToSubmit = prepareSelectedItems();
-
-    // if (itemsToSubmit.length === 0) {
-    //   alert("No items selected for KOT.");
-    //   return;
-    // }
-
-    try {
-      const response = await fetch(
-        `https://efc-app-sprp.onrender.com/api/v1/admin/generate-table-kot`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tableId, operatorId:"efc" }),
-        }
-      );
-
-      const result = await response.json();
-      if (result.success) {
-        setKotDetails(result.data);
-        alert("KOT generated successfully!");
-      } else {
-        alert(`Error: ${result.message}`);
-      }
-    } catch (err) {
-      console.error("Error generating KOT:", err);
-      alert("An error occurred while generating KOT.");
-    }
-  };
-
-  const handlePrintKOT = () => {
-    if (!kotDetails) return;
-    const printWindow = window.open("", "_blank");
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>KOT Ticket</title>
-        </head>
-        <body>
-          <h1>Kitchen Order Ticket</h1>
-          <p><strong>Ticket Number:</strong> ${kotDetails.ticketNumber}</p>
-          <p><strong>Table Name:</strong> ${kotDetails.tableName}</p>
-          <p><strong>Operator ID:</strong> ${kotDetails.operatorId}</p>
-          <p><strong>Bill Date:</strong> ${new Date(
-            kotDetails.billDate
-          ).toLocaleString()}</p>
-          <h2>Items</h2>
-          <ul>
-            ${kotDetails.items
-              .map(
-                (item) =>
-                  `<li>${item.itemName} - Quantity: ${item.quantity}</li>`
-              )
-              .join("")}
-          </ul>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
-  };
-
-  if (loading) {
-    return <div className="min-h-screen bg-red-100 flex items-center justify-center">Loading...</div>;
-  }
-
-  if (error) {
-    return <div className="min-h-screen bg-red-100 flex items-center justify-center">Error: {error}</div>;
-  }
-
   return (
-    <div className="min-h-screen relative bg-red-50">
-      {/* Top Red Bar */}
-      <div className="bg-red-600 w-full py-4 shadow-lg flex items-center px-4">
+    <div className="bg-red-800 min-h-screen px-4 py-6">
+      {/* Header with Go Back Icon */}
+      <header className="flex items-center mb-4">
         <button
-          onClick={() => navigate(-1)}
-          className="bg-white text-red-600 px-4 py-2 rounded-full shadow-md font-semibold hover:bg-red-200 transition"
+          onClick={() => navigate(-1)} // This will navigate to the previous page
+          className="bg-transparent text-white p-2 rounded-full"
         >
-          Back
+          <AiOutlineArrowLeft size={24} /> {/* Go Back Icon */}
         </button>
-        <h1 className="text-2xl text-white font-bold mx-auto">Category Items</h1>
-      </div>
+        <h1 className="text-white text-2xl font-bold ml-4">Category Items</h1>
+        <button
+          onClick={() => setIsModalOpen(true)} // Open modal on click
+          className="ml-auto text-white bg-green-600 p-2 rounded-full"
+        >
+          Add Item
+        </button>
+      </header>
 
-      {/* Background Image */}
-      <div
-        className="absolute inset-0 z-0 opacity-20"
-        style={{
-          backgroundImage: 'url("https://via.placeholder.com/1920x1080")',
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
-      ></div>
-
-      {/* Content */}
-      <div className="relative z-10 flex flex-col items-center p-6">
-        <h1 className="text-3xl font-extrabold mt-10 text-gray-700">Items in Category</h1>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mt-10 w-full max-w-6xl">
-          {items.map((item) => (
-            <div
-              key={item._id}
-              className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-300 ease-in-out"
-            >
-              <img
-                src={item.image}
-                alt={item.itemName}
-                className="w-full h-48 object-cover"
+      {/* Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white p-6 rounded-lg w-96">
+            <h2 className="text-xl font-semibold mb-4">Add New Item</h2>
+            <div>
+              <label className="block mb-2">Item Name</label>
+              <input
+                type="text"
+                name="itemName"
+                value={newItem.itemName}
+                onChange={handleInputChange}
+                className="w-full p-2 border rounded mb-4"
+                placeholder="Item Name"
               />
-              <div className="p-4">
-                <h2 className="text-lg font-semibold text-gray-800">{item.itemName}</h2>
-                <p className="text-gray-600">${item.price}</p>
-                <p className="text-sm text-gray-500 mt-2">{item.description}</p>
-              </div>
-              <div className="p-4 bg-gray-100 border-t flex flex-col items-center">
-                {tableId ? (
-                  <>
-                    <div className="flex items-center space-x-4">
-                      <button
-                        className={`w-10 h-10 rounded-full border ${
-                          (selectedItems[item._id] || 0) === 0
-                            ? "text-gray-400 cursor-not-allowed"
-                            : "text-gray-800 hover:bg-gray-200"
-                        }`}
-                        disabled={(selectedItems[item._id] || 0) === 0}
-                        onClick={() =>
-                          handleQuantityChange(item._id, (selectedItems[item._id] || 0) - 1)
-                        }
-                      >
-                        -
-                      </button>
-                      <span>{selectedItems[item._id] || 0}</span>
-                      <button
-                        className="w-10 h-10 rounded-full border text-gray-800 hover:bg-gray-200"
-                        onClick={() =>
-                          handleQuantityChange(item._id, (selectedItems[item._id] || 0) + 1)
-                        }
-                      >
-                        +
-                      </button>
-                    </div>
-                    <button
-                      className="mt-2 text-red-500 hover:text-red-700 text-sm"
-                      onClick={() => handleQuantityChange(item._id, 0)}
-                    >
-                      Deselect
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    className="bg-red-300 text-red-800 px-4 py-2 rounded-lg hover:bg-red-400 transition"
-                    onClick={() => {
-                      setItemToRemove(item._id);
-                      setShowModal(true);
-                    }}
-                  >
-                    Remove Item
-                  </button>
-                )}
-              </div>
+              <label className="block mb-2">Type</label>
+              <input
+                type="text"
+                name="type"
+                value={newItem.type}
+                onChange={handleInputChange}
+                className="w-full p-2 border rounded mb-4"
+                placeholder="Type (e.g., veg, non-veg)"
+              />
+              <label className="block mb-2">Kitchen</label>
+              <input
+                type="text"
+                name="kitchen"
+                value={newItem.kitchen}
+                onChange={handleInputChange}
+                className="w-full p-2 border rounded mb-4"
+                placeholder="Kitchen"
+              />
+              <label className="block mb-2">Price</label>
+              <input
+                type="number"
+                name="price"
+                value={newItem.price}
+                onChange={handleInputChange}
+                className="w-full p-2 border rounded mb-4"
+                placeholder="Price"
+              />
+              <label className="block mb-2">Image URL</label>
+              <input
+                type="text"
+                name="image"
+                value={newItem.image}
+                onChange={handleInputChange}
+                className="w-full p-2 border rounded mb-4"
+                placeholder="Image URL"
+              />
             </div>
-          ))}
-        </div>
-
-        {/* Add to Table Button */}
-        {tableId && Object.keys(selectedItems).some((id) => selectedItems[id] > 0) && (
-          <button
-            className="mt-6 bg-green-500 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:scale-105"
-            onClick={handleSubmit}
-          >
-            Add Selected Items to Table
-          </button>
-        )}
-        {tableId && (
-          <div className="mt-6 flex space-x-4">
-            <button
-              className="bg-blue-500 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:scale-105"
-              onClick={handleGenerateKOT}
-            >
-              Generate KOT
-            </button>
-            {kotDetails && (
+            <div className="flex justify-between">
               <button
-                className="bg-green-500 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:scale-105"
-                onClick={handlePrintKOT}
+                onClick={() => setIsModalOpen(false)}
+                className="bg-gray-500 text-white px-4 py-2 rounded"
               >
-                Print KOT
+                Cancel
               </button>
-            )}
+              <button
+                onClick={handleAddItem}
+                className="bg-green-600 text-white px-4 py-2 rounded"
+              >
+                Add Item
+              </button>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-white text-lg">Loading...</div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {foodItems.length > 0 ? (
+            foodItems.map((item) => (
+              <div
+                key={item._id}
+                className="bg-yellow-300 rounded-lg shadow-md p-4 flex flex-col items-center"
+              >
+                <img
+                  src={
+                    item.image
+                      ? `https://efc-app-sprp.onrender.com/${item.image}`
+                      : "/placeholder-image.png"
+                  }
+                  alt={item.itemName}
+                  className="w-24 h-24 rounded-md mb-4"
+                />
+                <h3 className="text-lg font-bold text-black">{item.itemName}</h3>
+                <p className="text-sm text-gray-700">
+                  {item.description || "No description available"}
+                </p>
+                <p className="text-md font-semibold text-black mt-2">
+                  ₹{item.price}
+                </p>
+              </div>
+            ))
+          ) : (
+            <p className="text-white text-center text-lg">
+              No items found for this category.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 };
