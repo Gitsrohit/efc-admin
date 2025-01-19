@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify"; // Add toast notifications
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { AiOutlineLoading3Quarters } from "react-icons/ai"; // Loader icon
-import { FaCheckCircle } from "react-icons/fa"; // Success tick icon
+import { AiOutlineLoading3Quarters } from "react-icons/ai";
+import { FaCheckCircle } from "react-icons/fa";
+import { useLocation } from "react-router-dom";
 
 const CategoryDashboard = () => {
+  const { state } = useLocation();
+  const tableId = state?.tableId;
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [removing, setRemoving] = useState(null); // Track which category is being removed
+  const [removing, setRemoving] = useState(null);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
@@ -35,7 +38,7 @@ const CategoryDashboard = () => {
   }, []);
 
   const handleCategoryClick = (categoryId) => {
-    navigate(`/category/${categoryId}`);
+    navigate(`/category/${categoryId}`, { state: { tableId } });
   };
 
   const handleRemoveCategory = async (categoryId) => {
@@ -61,7 +64,7 @@ const CategoryDashboard = () => {
       );
       setTimeout(() => {
         setRemoving(null);
-      }, 1000); // Show tick animation for 1 second
+      }, 1000);
     } catch (error) {
       console.error(error);
       toast.error("Error removing category!");
@@ -82,61 +85,36 @@ const CategoryDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-pink-200 flex flex-col items-center">
-      <h1 className="text-2xl font-bold mt-10">Category Dashboard</h1>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-10 w-11/12">
+    
+    <div
+      className="min-h-screen bg-pink-200 flex flex-col items-center p-4 relative"
+
+      style={{
+        backgroundImage: "url('../../public/assets/OIP.png')",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "center",
+        backgroundSize: "contain",
+      }}
+    >
+      <h1 className="text-3xl font-bold mt-4 text-black">CATEGORY</h1>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-6">
         {categories.map((category) => (
           <div
             key={category._id}
-            className="bg-white rounded-lg shadow-lg overflow-hidden cursor-pointer transform transition-transform hover:scale-105"
+            className="flex flex-col items-center bg-red-500 rounded-lg p-4 cursor-pointer transform transition-transform hover:scale-105"
             onClick={() => handleCategoryClick(category._id)}
           >
-            {/* Image Section */}
-            <img
-              src={
-                category.image.includes("http")
-                  ? category.image
-                  : `https://efc-app-sprp.onrender.com/${category.image}`
-              }
-              alt={category.name}
-              className="w-full h-48 object-cover"
-            />
-            {/* Text Section */}
-            <div className="p-4 text-center">
-              <h2
-                className="text-lg font-bold text-gray-800"
-                // onClick={() => handleCategoryClick(category._id)}
-              >
-                {category.name}
-              </h2>
-              <p className="text-sm text-gray-600">{category.type || "Category"}</p>
-            </div>
-
-            {/* Delete Button below category name */}
-            <div className="p-4 text-center">
-              <button
-                className="bg-red-300 text-red-800 rounded-lg p-2 w-28 text-center transition-all duration-200 hover:bg-red-400 hover:opacity-90"
-                onClick={() => handleRemoveCategory(category._id)}
-              >
-                {removing === category._id ? (
-                  <div className="flex items-center justify-center">
-                    <AiOutlineLoading3Quarters className="animate-spin text-xl" />
-                  </div>
-                ) : (
-                  "Delete"
-                )}
-              </button>
-            </div>
-
-            {/* Success Tick Animation */}
-            {removing === category._id && (
-              <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-50">
-                <FaCheckCircle className="text-green-500 text-4xl animate-bounce" />
-              </div>
-            )}
+            <div className="w-16 h-16 bg-red-700 rounded-md"></div>
+            <p className="mt-2 text-white font-semibold">{category.name.toUpperCase()}</p>
           </div>
         ))}
       </div>
+      <button
+        className="mt-6 bg-yellow-400 text-black font-bold py-2 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105"
+        onClick={() => navigate("/add-category")}
+      >
+        ADD NEW CATEGORY
+      </button>
     </div>
   );
 };

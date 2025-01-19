@@ -1,9 +1,8 @@
 const path = require("path");
+
 module.exports = [
   // Add support for native node modules
   {
-    // We're specifying native_modules in the test because the asset relocator loader generates a
-    // "fake" .node file which is really a cjs file.
     test: /native_modules[/\\].+\.node$/,
     use: 'node-loader',
   },
@@ -19,34 +18,36 @@ module.exports = [
   },
   {
     test: /\.jsx?$/,
-    use : {
+    use: {
       loader: "babel-loader",
       options: {
         exclude: /node_modules/,
-        presets: ["@babel/preset-react"]
+        presets: ["@babel/preset-react"],
       },
     },
   },
   {
-    // loads .css files
+    // Loads .css files
     test: /\.css$/,
     include: [path.resolve(__dirname, "app/src")],
     use: ["style-loader", "css-loader", "postcss-loader"],
   },
-  // Put your webpack loader rules in this array.  This is where you would put
-  // your ts-loader configuration for instance:
-  /**
-   * Typescript Example:
-   *
-   * {
-   *   test: /\.tsx?$/,
-   *   exclude: /(node_modules|.webpack)/,
-   *   loaders: [{
-   *     loader: 'ts-loader',
-   *     options: {
-   *       transpileOnly: true
-   *     }
-   *   }]
-   * }
-   */
+  {
+    // Loads image files
+    test: /\.(png|jpe?g|gif|svg)$/i,
+    type: "asset/resource",
+    generator: {
+      filename: "images/[name][ext]",
+    },
+
+  },
+  {
+    // Loads .mp3 files
+    test: /\.mp3$/i,
+    type: "asset/resource", // Or use 'url-loader' if you want to inline base64 encoded files
+    generator: {
+      filename: "audio/[name][ext]", // This specifies the output folder for mp3 files
+    },
+  }
+  // Add other rules here if needed
 ];
